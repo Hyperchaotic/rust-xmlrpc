@@ -9,26 +9,26 @@
 // Rust XML-RPC library
 
 use hyper;
-use std::string;
 use std::io::Read;
+use super::{Request, Response};
 
 pub struct Client {
-    url: string::String,
+    url: String,
 }
 
+// The Client in rust-xmlrpc can panic. Using own implementation here.
 impl Client {
     pub fn new(s: &str) -> Client {
         Client { url: s.to_string() }
     }
 
-    pub fn remote_call(&self, request: &super::Request) -> Option<super::Response> {
+    pub fn remote_call(&self, request: &Request) -> Result<Response, hyper::Error> {
         let mut http_client = hyper::Client::new();
-        let result = http_client.post(&self.url)
-            .body(&request.body) // FIXME: use to_xml() somehow?
-            .send();
-        let mut body = String::new();    
-        result.ok().unwrap().read_to_string(&mut body).ok().expect("could not read response");
-        //println!("{}", response.unwrap());
-        Some(super::Response::new(&body)) // FIXME: change to a Result<> type
+        let mut result = try!(http_client.post(&self.url).body(&request.body).send());
+
+        let mut body = String::new();
+
+        try!(result.read_to_string(&mut body));
+        Ok(Response::new(&body))
     }
 }
